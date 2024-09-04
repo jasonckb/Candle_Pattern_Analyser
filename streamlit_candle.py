@@ -131,14 +131,14 @@ def main():
     ticker = st.sidebar.text_input("Enter Ticker Symbol", value="0700.HK")
     
     st.sidebar.header("Pinbar Analysis")
-    pinbar_lookback = st.sidebar.slider("Pinbar Trend Lookback Period", min_value=5, max_value=50, value=10, key="pinbar_lookback")
+    pinbar_lookback = st.sidebar.slider("Up/ Down Trend Defining Lookback Period", min_value=5, max_value=50, value=10, key="pinbar_lookback")
     wick_ratio = st.sidebar.slider("Wick Ratio", min_value=0.5, max_value=0.95, value=0.75, step=0.05)
-    pinbar_stop_loss_pct = st.sidebar.slider("Pinbar Stop Loss Percentage", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="pinbar_stop_loss")
+    pinbar_stop_loss_pct = st.sidebar.slider("Stop Loss % Added to Extreme of Trigger Bar", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="pinbar_stop_loss")
     
     st.sidebar.header("Engulfing Pattern Analysis")
-    engulfing_lookback = st.sidebar.slider("Engulfing Trend Lookback Period", min_value=5, max_value=50, value=20, key="engulfing_lookback")
+    engulfing_lookback = st.sidebar.slider("Up/ Down Trend Defining Lookback Period", min_value=5, max_value=50, value=20, key="engulfing_lookback")
     body_ratio = st.sidebar.slider("Body Ratio", min_value=0.5, max_value=0.95, value=0.8, step=0.05)
-    engulfing_stop_loss_pct = st.sidebar.slider("Engulfing Stop Loss Percentage", min_value=0.1, max_value=2.0, value=0.2, step=0.1, key="engulfing_stop_loss")
+    engulfing_stop_loss_pct = st.sidebar.slider("Stop Loss Added to Extreme of Pattern", min_value=0.1, max_value=2.0, value=0.2, step=0.1, key="engulfing_stop_loss")
     
     data = download_data(ticker)
     
