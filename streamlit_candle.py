@@ -71,9 +71,11 @@ def main():
     st.title("Price Pattern Analysis App")
     
     ticker = st.sidebar.text_input("Enter Ticker Symbol", value="0700.HK")
+    
+    st.sidebar.header("Pinbar Analysis")
     lookback = st.sidebar.slider("Trend Defining Lookback Period", min_value=5, max_value=50, value=10)
     wick_ratio = st.sidebar.slider("Wick Ratio", min_value=0.5, max_value=0.95, value=0.75, step=0.05)
-    stop_loss_pct = st.sidebar.slider("Stop Loss Percentage(% added to High of Trigger Bar", min_value=0.001, max_value=0.02, value=0.005, step=0.001)
+    stop_loss_pct = st.sidebar.slider("Stop Loss Percentage (% added to High of Trigger Bar)", min_value=0.1, max_value=2.0, value=0.5, step=0.1)
     
     data = download_data(ticker)
     
@@ -93,22 +95,26 @@ def main():
     
     multipliers = [1, 1.5, 2, 3]
     
-    bearish_results = calculate_success_rate(data, bearish_pinbars, multipliers, stop_loss_pct)
-    bullish_results = calculate_success_rate(data, bullish_pinbars, multipliers, stop_loss_pct)
+    bearish_results = calculate_success_rate(data, bearish_pinbars, multipliers, stop_loss_pct / 100)
+    bullish_results = calculate_success_rate(data, bullish_pinbars, multipliers, stop_loss_pct / 100)
     
-    st.subheader(f"Bearish Pinbar Results (Wick size = {wick_ratio:.0%} of Bar)")
-    for mult, result in bearish_results.items():
-        total = result['success'] + result['fail']
-        if total > 0:
-            win_rate = result['success'] / total
-            st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
+    col1, col2 = st.columns(2)
     
-    st.subheader(f"Bullish Pinbar Results (Wick size = {wick_ratio:.0%} of Bar)")
-    for mult, result in bullish_results.items():
-        total = result['success'] + result['fail']
-        if total > 0:
-            win_rate = result['success'] / total
-            st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
+    with col1:
+        st.subheader(f"Bearish Pinbar Results\n(Wick size = {wick_ratio:.0%} of Bar)")
+        for mult, result in bearish_results.items():
+            total = result['success'] + result['fail']
+            if total > 0:
+                win_rate = result['success'] / total
+                st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
+    
+    with col2:
+        st.subheader(f"Bullish Pinbar Results\n(Wick size = {wick_ratio:.0%} of Bar)")
+        for mult, result in bullish_results.items():
+            total = result['success'] + result['fail']
+            if total > 0:
+                win_rate = result['success'] / total
+                st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
 
 if __name__ == "__main__":
     main()
