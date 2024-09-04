@@ -125,7 +125,8 @@ def display_results(results, pattern_name):
             st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
 
 def main():
-    st.title("Price Pattern Analysis App")
+    st.set_page_config(layout="wide")
+    st.title("Price Pattern Analysis by Jason Chan")
     
     ticker = st.sidebar.text_input("Enter Ticker Symbol", value="0700.HK")
     
