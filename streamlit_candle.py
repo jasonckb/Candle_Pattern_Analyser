@@ -73,7 +73,7 @@ def main():
     ticker = st.sidebar.text_input("Enter Ticker Symbol", value="AAPL")
     lookback = st.sidebar.slider("Trend Lookback Period", min_value=5, max_value=50, value=10)
     wick_ratio = st.sidebar.slider("Wick Ratio", min_value=0.5, max_value=0.95, value=0.75, step=0.05)
-    stop_loss_pct = st.sidebar.slider("Stop Loss Percentage", min_value=0.001, max_value=0.01, value=0.001, step=0.001)
+    stop_loss_pct = st.sidebar.slider("Stop Loss Percentage", min_value=0.001, max_value=0.02, value=0.005, step=0.001)
     
     data = download_data(ticker)
     
