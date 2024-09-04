@@ -23,49 +23,106 @@ def is_bullish_pinbar(candle, downtrend, lower_wick_ratio):
     lower_wick = min(candle['Open'], candle['Close']) - candle['Low']
     return downtrend and (lower_wick / candle_size >= lower_wick_ratio)
 
-def analyze_pinbars(data, lookback, wick_ratio):
+def is_bearish_engulfing(prev_candle, curr_candle, uptrend, body_ratio):
+    prev_body_size = abs(prev_candle['Close'] - prev_candle['Open'])
+    curr_body_size = abs(curr_candle['Close'] - curr_candle['Open'])
+    prev_candle_size = prev_candle['High'] - prev_candle['Low']
+    curr_candle_size = curr_candle['High'] - curr_candle['Low']
+    
+    return (uptrend and
+            prev_candle['Close'] > prev_candle['Open'] and
+            curr_candle['Close'] < curr_candle['Open'] and
+            prev_body_size / prev_candle_size >= body_ratio and
+            curr_body_size / curr_candle_size >= body_ratio and
+            curr_body_size > prev_body_size)
+
+def is_bullish_engulfing(prev_candle, curr_candle, downtrend, body_ratio):
+    prev_body_size = abs(prev_candle['Close'] - prev_candle['Open'])
+    curr_body_size = abs(curr_candle['Close'] - curr_candle['Open'])
+    prev_candle_size = prev_candle['High'] - prev_candle['Low']
+    curr_candle_size = curr_candle['High'] - curr_candle['Low']
+    
+    return (downtrend and
+            prev_candle['Close'] < prev_candle['Open'] and
+            curr_candle['Close'] > curr_candle['Open'] and
+            prev_body_size / prev_candle_size >= body_ratio and
+            curr_body_size / curr_candle_size >= body_ratio and
+            curr_body_size > prev_body_size)
+
+def analyze_patterns(data, lookback, wick_ratio, body_ratio):
     bearish_pinbars = []
     bullish_pinbars = []
+    bearish_engulfing = []
+    bullish_engulfing = []
     
     for i in range(lookback, len(data)):
         slice = data.iloc[i-lookback:i+1]
         candle = slice.iloc[-1]
+        prev_candle = slice.iloc[-2]
         
         if is_uptrend(slice, lookback):
             if is_bearish_pinbar(candle, True, wick_ratio):
                 bearish_pinbars.append(i)
+            if is_bearish_engulfing(prev_candle, candle, True, body_ratio):
+                bearish_engulfing.append(i)
         elif is_downtrend(slice, lookback):
             if is_bullish_pinbar(candle, True, wick_ratio):
                 bullish_pinbars.append(i)
+            if is_bullish_engulfing(prev_candle, candle, True, body_ratio):
+                bullish_engulfing.append(i)
     
-    return bearish_pinbars, bullish_pinbars
+    return bearish_pinbars, bullish_pinbars, bearish_engulfing, bullish_engulfing
 
-def calculate_success_rate(data, pinbars, multipliers, stop_loss_pct):
+def calculate_success_rate(data, patterns, multipliers, stop_loss_pct, pattern_type):
     results = {mult: {'success': 0, 'fail': 0} for mult in multipliers}
     
-    for idx in pinbars:
-        candle = data.iloc[idx]
-        candle_size = candle['High'] - candle['Low']
-        stop_loss = candle['High'] + (candle['Close'] * stop_loss_pct)
+    for idx in patterns:
+        trigger_candle = data.iloc[idx]
+        prev_candle = data.iloc[idx-1]
+        candle_size = trigger_candle['High'] - trigger_candle['Low']
         
-        for j in range(idx+1, len(data)):
-            next_candle = data.iloc[j]
-            
-            if next_candle['High'] >= stop_loss:
-                for mult in multipliers:
-                    results[mult]['fail'] += 1
-                break
-            
-            for mult in multipliers:
-                target = candle['Close'] - (candle_size * mult)
-                if next_candle['Low'] <= target:
-                    results[mult]['success'] += 1
+        if pattern_type in ['bearish_pinbar', 'bearish_engulfing']:
+            stop_loss = max(trigger_candle['High'], prev_candle['High']) + (trigger_candle['Close'] * stop_loss_pct)
+            for j in range(idx+1, len(data)):
+                next_candle = data.iloc[j]
+                if next_candle['High'] >= stop_loss:
+                    for mult in multipliers:
+                        results[mult]['fail'] += 1
                     break
-            else:
-                continue
-            break
+                for mult in multipliers:
+                    target = trigger_candle['Close'] - (candle_size * mult)
+                    if next_candle['Low'] <= target:
+                        results[mult]['success'] += 1
+                        break
+                else:
+                    continue
+                break
+        else:  # bullish patterns
+            stop_loss = min(trigger_candle['Low'], prev_candle['Low']) - (trigger_candle['Close'] * stop_loss_pct)
+            for j in range(idx+1, len(data)):
+                next_candle = data.iloc[j]
+                if next_candle['Low'] <= stop_loss:
+                    for mult in multipliers:
+                        results[mult]['fail'] += 1
+                    break
+                for mult in multipliers:
+                    target = trigger_candle['Close'] + (candle_size * mult)
+                    if next_candle['High'] >= target:
+                        results[mult]['success'] += 1
+                        break
+                else:
+                    continue
+                break
     
     return results
+
+def display_results(results, pattern_name):
+    st.subheader(f"{pattern_name} Results")
+    for mult, result in results.items():
+        total = result['success'] + result['fail']
+        if total > 0:
+            win_rate = result['success'] / total
+            st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
 
 def main():
     st.title("Price Pattern Analysis App")
@@ -73,9 +130,14 @@ def main():
     ticker = st.sidebar.text_input("Enter Ticker Symbol", value="0700.HK")
     
     st.sidebar.header("Pinbar Analysis")
-    lookback = st.sidebar.slider("Trend Defining Lookback Period", min_value=5, max_value=50, value=10)
+    pinbar_lookback = st.sidebar.slider("Pinbar Trend Lookback Period", min_value=5, max_value=50, value=10, key="pinbar_lookback")
     wick_ratio = st.sidebar.slider("Wick Ratio", min_value=0.5, max_value=0.95, value=0.75, step=0.05)
-    stop_loss_pct = st.sidebar.slider("Stop Loss Percentage (% added to High of Trigger Bar)", min_value=0.1, max_value=2.0, value=0.5, step=0.1)
+    pinbar_stop_loss_pct = st.sidebar.slider("Pinbar Stop Loss Percentage", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="pinbar_stop_loss")
+    
+    st.sidebar.header("Engulfing Pattern Analysis")
+    engulfing_lookback = st.sidebar.slider("Engulfing Trend Lookback Period", min_value=5, max_value=50, value=20, key="engulfing_lookback")
+    body_ratio = st.sidebar.slider("Body Ratio", min_value=0.5, max_value=0.95, value=0.8, step=0.05)
+    engulfing_stop_loss_pct = st.sidebar.slider("Engulfing Stop Loss Percentage", min_value=0.1, max_value=2.0, value=0.2, step=0.1, key="engulfing_stop_loss")
     
     data = download_data(ticker)
     
@@ -84,37 +146,38 @@ def main():
         return
     
     st.write(f"Analyzing {ticker} data...")
-
-    # Display the period of the downloaded data
     st.write(f"Data period: from {data.index[0].date()} to {data.index[-1].date()} ({len(data)} trading days)")
     
-    bearish_pinbars, bullish_pinbars = analyze_pinbars(data, lookback, wick_ratio)
-    
-    st.write(f"Total Bearish Pinbars: {len(bearish_pinbars)}")
-    st.write(f"Total Bullish Pinbars: {len(bullish_pinbars)}")
+    bearish_pinbars, bullish_pinbars, bearish_engulfing, bullish_engulfing = analyze_patterns(data, max(pinbar_lookback, engulfing_lookback), wick_ratio, body_ratio)
     
     multipliers = [1, 1.5, 2, 3]
     
-    bearish_results = calculate_success_rate(data, bearish_pinbars, multipliers, stop_loss_pct / 100)
-    bullish_results = calculate_success_rate(data, bullish_pinbars, multipliers, stop_loss_pct / 100)
-    
+    st.header("Pinbar Analysis")
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader(f"Bearish Pinbar Results\n(Wick size = {wick_ratio:.0%} of Bar)")
-        for mult, result in bearish_results.items():
-            total = result['success'] + result['fail']
-            if total > 0:
-                win_rate = result['success'] / total
-                st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
+        st.write(f"Total Bearish Pinbars: {len(bearish_pinbars)}")
+        bearish_pinbar_results = calculate_success_rate(data, bearish_pinbars, multipliers, pinbar_stop_loss_pct / 100, 'bearish_pinbar')
+        display_results(bearish_pinbar_results, f"Bearish Pinbar (Wick size = {wick_ratio:.0%} of Bar)")
     
     with col2:
-        st.subheader(f"Bullish Pinbar Results\n(Wick size = {wick_ratio:.0%} of Bar)")
-        for mult, result in bullish_results.items():
-            total = result['success'] + result['fail']
-            if total > 0:
-                win_rate = result['success'] / total
-                st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
+        st.write(f"Total Bullish Pinbars: {len(bullish_pinbars)}")
+        bullish_pinbar_results = calculate_success_rate(data, bullish_pinbars, multipliers, pinbar_stop_loss_pct / 100, 'bullish_pinbar')
+        display_results(bullish_pinbar_results, f"Bullish Pinbar (Wick size = {wick_ratio:.0%} of Bar)")
+    
+    st.header("Engulfing Pattern Analysis")
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        st.write(f"Total Bearish Engulfing: {len(bearish_engulfing)}")
+        bearish_engulfing_results = calculate_success_rate(data, bearish_engulfing, multipliers, engulfing_stop_loss_pct / 100, 'bearish_engulfing')
+        display_results(bearish_engulfing_results, f"Bearish Engulfing (Body size = {body_ratio:.0%} of Bar)")
+    
+    with col4:
+        st.write(f"Total Bullish Engulfing: {len(bullish_engulfing)}")
+        bullish_engulfing_results = calculate_success_rate(data, bullish_engulfing, multipliers, engulfing_stop_loss_pct / 100, 'bullish_engulfing')
+        display_results(bullish_engulfing_results, f"Bullish Engulfing (Body size = {body_ratio:.0%} of Bar)")
 
 if __name__ == "__main__":
     main()
+
