@@ -96,14 +96,14 @@ def main():
     bearish_results = calculate_success_rate(data, bearish_pinbars, multipliers, stop_loss_pct)
     bullish_results = calculate_success_rate(data, bullish_pinbars, multipliers, stop_loss_pct)
     
-    st.subheader("Bearish Pinbar Results")
+    st.subheader(f"Bearish Pinbar Results (Wick size = {wick_ratio:.0%} of Bar)")
     for mult, result in bearish_results.items():
         total = result['success'] + result['fail']
         if total > 0:
             win_rate = result['success'] / total
             st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
     
-    st.subheader("Bullish Pinbar Results")
+    st.subheader("Bullish Pinbar Results (Wick size = {wick_ratio:.0%} of Bar)")
     for mult, result in bullish_results.items():
         total = result['success'] + result['fail']
         if total > 0:
