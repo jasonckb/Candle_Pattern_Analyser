@@ -70,10 +70,10 @@ def calculate_success_rate(data, pinbars, multipliers, stop_loss_pct):
 def main():
     st.title("Price Pattern Analysis App")
     
-    ticker = st.sidebar.text_input("Enter Ticker Symbol", value="AAPL")
-    lookback = st.sidebar.slider("Trend Lookback Period", min_value=5, max_value=50, value=10)
+    ticker = st.sidebar.text_input("Enter Ticker Symbol", value="0700.HK")
+    lookback = st.sidebar.slider("Trend Defining Lookback Period", min_value=5, max_value=50, value=10)
     wick_ratio = st.sidebar.slider("Wick Ratio", min_value=0.5, max_value=0.95, value=0.75, step=0.05)
-    stop_loss_pct = st.sidebar.slider("Stop Loss Percentage", min_value=0.001, max_value=0.02, value=0.005, step=0.001)
+    stop_loss_pct = st.sidebar.slider("Stop Loss Percentage(% added to High of Trigger Bar", min_value=0.001, max_value=0.02, value=0.005, step=0.001)
     
     data = download_data(ticker)
     
@@ -82,6 +82,9 @@ def main():
         return
     
     st.write(f"Analyzing {ticker} data...")
+
+    # Display the period of the downloaded data
+    st.write(f"Data period: from {data.index[0].date()} to {data.index[-1].date()} ({len(data)} trading days)")
     
     bearish_pinbars, bullish_pinbars = analyze_pinbars(data, lookback, wick_ratio)
     
