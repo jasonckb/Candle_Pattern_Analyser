@@ -88,7 +88,7 @@ def main():
     
     bearish_pinbars, bullish_pinbars = analyze_pinbars(data, lookback, wick_ratio)
     
-    st.write(f"Total Bearish Pinbars: {len(bearish_pinbars)}")
+        st.write(f"Total Bearish Pinbars: {len(bearish_pinbars)}")
     st.write(f"Total Bullish Pinbars: {len(bullish_pinbars)}")
     
     multipliers = [1, 1.5, 2, 3]
