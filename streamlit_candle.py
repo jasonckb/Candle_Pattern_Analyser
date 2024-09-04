@@ -92,41 +92,49 @@ def calculate_success_rate(data, patterns, multipliers, atr):
             risk = stop_loss - trigger_candle['Close']
             targets = [trigger_candle['Close'] - mult * risk for mult in multipliers]
             
+            highest_reached = None
             for j in range(idx+1, min(idx+15, len(data))):
                 next_candle = data.iloc[j]
                 if next_candle['High'] >= stop_loss:
-                    for mult in multipliers:
-                        results[mult]['fail'] += 1
                     break
                 for i, target in enumerate(targets):
                     if next_candle['Low'] <= target:
-                        for mult in multipliers[i:]:
-                            results[mult]['success'] += 1
-                        break
-                else:
-                    continue
-                break
+                        highest_reached = i
+            
+            if highest_reached is not None:
+                for i in range(highest_reached + 1):
+                    results[multipliers[i]]['success'] += 1
+                for i in range(highest_reached + 1, len(multipliers)):
+                    results[multipliers[i]]['fail'] += 1
+            else:
+                for mult in multipliers:
+                    results[mult]['fail'] += 1
+                    
         else:  # Bullish pattern
             stop_loss = trigger_candle['Low'] - 0.5 * atr[idx]
             risk = trigger_candle['Close'] - stop_loss
             targets = [trigger_candle['Close'] + mult * risk for mult in multipliers]
             
+            highest_reached = None
             for j in range(idx+1, min(idx+15, len(data))):
                 next_candle = data.iloc[j]
                 if next_candle['Low'] <= stop_loss:
-                    for mult in multipliers:
-                        results[mult]['fail'] += 1
                     break
                 for i, target in enumerate(targets):
                     if next_candle['High'] >= target:
-                        for mult in multipliers[i:]:
-                            results[mult]['success'] += 1
-                        break
-                else:
-                    continue
-                break
+                        highest_reached = i
+            
+            if highest_reached is not None:
+                for i in range(highest_reached + 1):
+                    results[multipliers[i]]['success'] += 1
+                for i in range(highest_reached + 1, len(multipliers)):
+                    results[multipliers[i]]['fail'] += 1
+            else:
+                for mult in multipliers:
+                    results[mult]['fail'] += 1
     
     return results
+
 
 def display_results(results, pattern_name):
     st.subheader(f"{pattern_name} Results")
