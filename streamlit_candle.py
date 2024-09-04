@@ -90,16 +90,18 @@ def calculate_success_rate(data, patterns, multipliers, atr):
         if trigger_candle['Close'] < trigger_candle['Open']:  # Bearish pattern
             stop_loss = trigger_candle['High'] + 0.5 * atr[idx]
             risk = stop_loss - trigger_candle['Close']
+            targets = [trigger_candle['Close'] - mult * risk for mult in multipliers]
+            
             for j in range(idx+1, min(idx+15, len(data))):
                 next_candle = data.iloc[j]
                 if next_candle['High'] >= stop_loss:
                     for mult in multipliers:
                         results[mult]['fail'] += 1
                     break
-                for mult in multipliers:
-                    target = trigger_candle['Close'] - mult * risk
+                for i, target in enumerate(targets):
                     if next_candle['Low'] <= target:
-                        results[mult]['success'] += 1
+                        for mult in multipliers[i:]:
+                            results[mult]['success'] += 1
                         break
                 else:
                     continue
@@ -107,16 +109,18 @@ def calculate_success_rate(data, patterns, multipliers, atr):
         else:  # Bullish pattern
             stop_loss = trigger_candle['Low'] - 0.5 * atr[idx]
             risk = trigger_candle['Close'] - stop_loss
+            targets = [trigger_candle['Close'] + mult * risk for mult in multipliers]
+            
             for j in range(idx+1, min(idx+15, len(data))):
                 next_candle = data.iloc[j]
                 if next_candle['Low'] <= stop_loss:
                     for mult in multipliers:
                         results[mult]['fail'] += 1
                     break
-                for mult in multipliers:
-                    target = trigger_candle['Close'] + mult * risk
+                for i, target in enumerate(targets):
                     if next_candle['High'] >= target:
-                        results[mult]['success'] += 1
+                        for mult in multipliers[i:]:
+                            results[mult]['success'] += 1
                         break
                 else:
                     continue
@@ -155,6 +159,8 @@ def main():
     st.write(f"Analyzing {ticker} data...")
     st.write(f"Data period: from {data.index[0].date()} to {data.index[-1].date()} ({len(data)} trading days)")
     
+    st.info("Stop Loss Calculation: For bearish patterns, stop loss is set at the high of the trigger candle plus 0.5 ATR. For bullish patterns, it's set at the low of the trigger candle minus 0.5 ATR. ATR is calculated over a 14-day period.")
+    
     atr = calculate_atr(data)
     bearish_pinbars, bullish_pinbars, bearish_engulfing, bullish_engulfing = analyze_patterns(data, max(pinbar_lookback, engulfing_lookback), wick_ratio, body_ratio)
     
@@ -188,4 +194,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
