@@ -103,7 +103,7 @@ def main():
             win_rate = result['success'] / total
             st.write(f"Target {mult}x candle size - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
     
-    st.subheader("Bullish Pinbar Results (Wick size = {wick_ratio:.0%} of Bar)")
+    st.subheader(f"Bullish Pinbar Results (Wick size = {wick_ratio:.0%} of Bar)")
     for mult, result in bullish_results.items():
         total = result['success'] + result['fail']
         if total > 0:
