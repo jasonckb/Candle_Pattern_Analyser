@@ -181,12 +181,6 @@ def display_mfe_stats(mfe_list):
 
 
 def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
-    # Ensure the index is datetime
-    data.index = pd.to_datetime(data.index)
-    
-    # Remove weekends
-    data = data[data.index.dayofweek < 5]
-
     fig = make_subplots(rows=1, cols=1, shared_xaxes=True, vertical_spacing=0.03, subplot_titles=('Candlestick Chart'))
 
     # Add candlestick trace
@@ -201,7 +195,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
         name='Candlesticks'
     ))
 
-    # Highlight patterns
+    # Highlight patterns and add annotations
     for pattern_name, pattern_indices in patterns.items():
         for idx in pattern_indices:
             if idx in data.index:
@@ -230,12 +224,8 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                     risk = stop_loss - candle['Close']
                     targets = [candle['Close'] - mult * risk for mult in multipliers]
 
-                # Find the next 5 trading days
-                next_5_days = data.index[data.index > idx][:5]
-                if len(next_5_days) > 0:
-                    end_date = next_5_days[-1]
-                else:
-                    end_date = idx + timedelta(days=5)
+                # Find the end date for annotations (5 trading days later)
+                end_date = data.index[data.index.get_loc(idx) + 5]
 
                 # Add stop loss line
                 fig.add_trace(go.Scatter(
@@ -258,6 +248,19 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                         showlegend=False
                     ))
 
+    # Set x-axis to show only trading days and extend range for annotations
+    first_date = data.index[0]
+    last_date = data.index[-1]
+    annotation_x = last_date + timedelta(days=5)  # Extend 5 days for annotations
+
+    fig.update_xaxes(
+        rangebreaks=[
+            dict(bounds=["sat", "mon"]),  # Hide weekends
+            dict(values=["2023-12-25", "2024-01-01"])  # Example: hide specific holidays
+        ],
+        range=[first_date, annotation_x]  # Extend x-axis range for annotations
+    )
+
     fig.update_layout(
         title='One Year Candlestick Chart with Pattern Analysis',
         xaxis_title='Date',
@@ -266,6 +269,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
     )
 
     return fig
+
 
 
 
