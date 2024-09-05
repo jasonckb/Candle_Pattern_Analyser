@@ -83,6 +83,7 @@ def analyze_patterns(data, lookback, wick_ratio, body_ratio):
 
 def calculate_success_rate(data, patterns, multipliers, atr, stop_loss_atr):
     results = {mult: {'success': 0, 'fail': 0} for mult in multipliers}
+    mfe_list = []
     
     for idx in patterns:
         trigger_candle = data.iloc[idx]
@@ -93,13 +94,18 @@ def calculate_success_rate(data, patterns, multipliers, atr, stop_loss_atr):
             targets = [trigger_candle['Close'] - mult * risk for mult in multipliers]
             
             highest_reached = None
+            max_favorable_excursion = 0
             for j in range(idx+1, min(idx+15, len(data))):
                 next_candle = data.iloc[j]
                 if next_candle['High'] >= stop_loss:
                     break
+                favorable_excursion = (trigger_candle['Close'] - next_candle['Low']) / risk
+                max_favorable_excursion = max(max_favorable_excursion, favorable_excursion)
                 for i, target in enumerate(targets):
                     if next_candle['Low'] <= target:
                         highest_reached = i
+            
+            mfe_list.append(max_favorable_excursion)
             
             if highest_reached is not None:
                 for i in range(highest_reached + 1):
@@ -116,13 +122,18 @@ def calculate_success_rate(data, patterns, multipliers, atr, stop_loss_atr):
             targets = [trigger_candle['Close'] + mult * risk for mult in multipliers]
             
             highest_reached = None
+            max_favorable_excursion = 0
             for j in range(idx+1, min(idx+15, len(data))):
                 next_candle = data.iloc[j]
                 if next_candle['Low'] <= stop_loss:
                     break
+                favorable_excursion = (next_candle['High'] - trigger_candle['Close']) / risk
+                max_favorable_excursion = max(max_favorable_excursion, favorable_excursion)
                 for i, target in enumerate(targets):
                     if next_candle['High'] >= target:
                         highest_reached = i
+            
+            mfe_list.append(max_favorable_excursion)
             
             if highest_reached is not None:
                 for i in range(highest_reached + 1):
@@ -133,7 +144,23 @@ def calculate_success_rate(data, patterns, multipliers, atr, stop_loss_atr):
                 for mult in multipliers:
                     results[mult]['fail'] += 1
     
-    return results
+    return results, mfe_list
+
+def display_mfe_stats(mfe_list):
+    if mfe_list:
+        min_mfe = min(mfe_list)
+        mean_mfe = sum(mfe_list) / len(mfe_list)
+        median_mfe = sorted(mfe_list)[len(mfe_list) // 2]
+        max_mfe = max(mfe_list)
+        
+        st.write("MFE Statistics:")
+        st.write(f"Min MFE: {min_mfe:.2f}")
+        st.write(f"Mean MFE: {mean_mfe:.2f}")
+        st.write(f"Median MFE: {median_mfe:.2f}")
+        st.write(f"Max MFE: {max_mfe:.2f}")
+    else:
+        st.write("No MFE data available.")
+
 
 
 def display_results(results, pattern_name):
@@ -150,57 +177,35 @@ def main():
     
     ticker = st.sidebar.text_input("Enter Ticker Symbol", value="0700.HK")
     
-    st.sidebar.header("Pinbar Analysis")
-    pinbar_lookback = st.sidebar.slider("Up/ Down Trend Defining Lookback Period", min_value=5, max_value=50, value=10, key="pinbar_lookback")
-    wick_ratio = st.sidebar.slider("Wick Ratio", min_value=0.5, max_value=0.95, value=0.75, step=0.05)
-    pinbar_stop_loss = st.sidebar.slider("Pinbar Stop Loss (ATR multiplier)", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="pinbar_stop_loss")
-    
-    st.sidebar.header("Engulfing Pattern Analysis")
-    engulfing_lookback = st.sidebar.slider("Up/ Down Trend Defining Lookback Period", min_value=5, max_value=50, value=20, key="engulfing_lookback")
-    body_ratio = st.sidebar.slider("Body Ratio", min_value=0.5, max_value=0.95, value=0.8, step=0.05)
-    engulfing_stop_loss = st.sidebar.slider("Engulfing Stop Loss (ATR multiplier)", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="engulfing_stop_loss")
-    
-    data = download_data(ticker)
-    
-    if data.empty:
-        st.error(f"No data found for ticker {ticker}")
-        return
-    
-    st.write(f"Analyzing {ticker} data...")
-    st.write(f"Data period: from {data.index[0].date()} to {data.index[-1].date()} ({len(data)} trading days)")
-    
-    st.info(f"Stop Loss Calculation: For bearish patterns, stop loss is set at the high of the trigger candle plus {pinbar_stop_loss:.1f} ATR for Pinbars and {engulfing_stop_loss:.1f} ATR for Engulfing patterns. For bullish patterns, it's set at the low of the trigger candle minus the same ATR multiplier. ATR is calculated over a 14-day period.")
-    
-    atr = calculate_atr(data)
-    bearish_pinbars, bullish_pinbars, bearish_engulfing, bullish_engulfing = analyze_patterns(data, max(pinbar_lookback, engulfing_lookback), wick_ratio, body_ratio)
-    
-    multipliers = [0.5, 1, 1.5, 2, 3]
-    
     st.header("Pinbar Analysis")
     col1, col2 = st.columns(2)
     
     with col1:
         st.write(f"Total Bearish Pinbars: {len(bearish_pinbars)}")
-        bearish_pinbar_results = calculate_success_rate(data, bearish_pinbars, multipliers, atr, pinbar_stop_loss)
+        bearish_pinbar_results, bearish_pinbar_mfe = calculate_success_rate(data, bearish_pinbars, multipliers, atr, pinbar_stop_loss)
         display_results(bearish_pinbar_results, f"Bearish Pinbar (Wick size = {wick_ratio:.0%} of Bar)")
+        display_mfe_stats(bearish_pinbar_mfe)
     
     with col2:
         st.write(f"Total Bullish Pinbars: {len(bullish_pinbars)}")
-        bullish_pinbar_results = calculate_success_rate(data, bullish_pinbars, multipliers, atr, pinbar_stop_loss)
+        bullish_pinbar_results, bullish_pinbar_mfe = calculate_success_rate(data, bullish_pinbars, multipliers, atr, pinbar_stop_loss)
         display_results(bullish_pinbar_results, f"Bullish Pinbar (Wick size = {wick_ratio:.0%} of Bar)")
+        display_mfe_stats(bullish_pinbar_mfe)
     
     st.header("Engulfing Pattern Analysis")
     col3, col4 = st.columns(2)
     
     with col3:
         st.write(f"Total Bearish Engulfing: {len(bearish_engulfing)}")
-        bearish_engulfing_results = calculate_success_rate(data, bearish_engulfing, multipliers, atr, engulfing_stop_loss)
+        bearish_engulfing_results, bearish_engulfing_mfe = calculate_success_rate(data, bearish_engulfing, multipliers, atr, engulfing_stop_loss)
         display_results(bearish_engulfing_results, f"Bearish Engulfing (Body size = {body_ratio:.0%} of Bar)")
+        display_mfe_stats(bearish_engulfing_mfe)
     
     with col4:
         st.write(f"Total Bullish Engulfing: {len(bullish_engulfing)}")
-        bullish_engulfing_results = calculate_success_rate(data, bullish_engulfing, multipliers, atr, engulfing_stop_loss)
+        bullish_engulfing_results, bullish_engulfing_mfe = calculate_success_rate(data, bullish_engulfing, multipliers, atr, engulfing_stop_loss)
         display_results(bullish_engulfing_results, f"Bullish Engulfing (Body size = {body_ratio:.0%} of Bar)")
+        display_mfe_stats(bullish_engulfing_mfe)
 
 if __name__ == "__main__":
     main()
