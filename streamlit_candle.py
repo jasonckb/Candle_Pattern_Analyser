@@ -20,14 +20,14 @@ def calculate_atr(data, period=14):
 
 def is_uptrend(data, lookback):
     # Extract the 'High' values for the last 'lookback' periods
-    recent_highs = data['High'][-lookback:]
+    recent_highs = data['High'][-lookback-1:]
     
     # Check if the most recent high is higher than the highest high in the lookback period
     return data['High'].iloc[-1] > recent_highs.max()
 
 def is_downtrend(data, lookback):
     # Extract the 'Low' values for the last 'lookback' periods
-    recent_lows = data['Low'][-lookback:]
+    recent_lows = data['Low'][-lookback:]-1
     
     # Check if the most recent low is lower than the lowest low in the lookback period
     return data['Low'].iloc[-1] < recent_lows.min()
