@@ -225,7 +225,9 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                     targets = [candle['Close'] - mult * risk for mult in multipliers]
 
                 # Find the end date for annotations (5 trading days later)
-                end_date = data.index[data.index.get_loc(idx) + 5]
+                start_loc = data.index.get_loc(idx)
+                end_loc = min(start_loc + 5, len(data) - 1)
+                end_date = data.index[end_loc]
 
                 # Add stop loss line
                 fig.add_trace(go.Scatter(
@@ -269,6 +271,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
     )
 
     return fig
+
 
 
 
