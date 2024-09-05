@@ -105,7 +105,8 @@ def calculate_success_rate(data, patterns, multipliers, atr, stop_loss_atr):
                     if next_candle['Low'] <= target:
                         highest_reached = i
             
-            mfe_list.append(max_favorable_excursion)
+            if max_favorable_excursion > 0:
+                mfe_list.append(max_favorable_excursion)
             
             if highest_reached is not None:
                 for i in range(highest_reached + 1):
@@ -133,7 +134,8 @@ def calculate_success_rate(data, patterns, multipliers, atr, stop_loss_atr):
                     if next_candle['High'] >= target:
                         highest_reached = i
             
-            mfe_list.append(max_favorable_excursion)
+            if max_favorable_excursion > 0:
+                mfe_list.append(max_favorable_excursion)
             
             if highest_reached is not None:
                 for i in range(highest_reached + 1):
@@ -146,6 +148,7 @@ def calculate_success_rate(data, patterns, multipliers, atr, stop_loss_atr):
     
     return results, mfe_list
 
+
 def display_results(results, pattern_name):
     st.subheader(f"{pattern_name} Results")
     for mult, result in results.items():
@@ -156,16 +159,20 @@ def display_results(results, pattern_name):
 
 def display_mfe_stats(mfe_list):
     if mfe_list:
-        min_mfe = min(mfe_list)
-        mean_mfe = sum(mfe_list) / len(mfe_list)
-        median_mfe = sorted(mfe_list)[len(mfe_list) // 2]
-        max_mfe = max(mfe_list)
-        
-        st.write("MFE Statistics (in R multiples, where 1R = initial risk):")
-        st.write(f"Min MFE: {min_mfe:.2f}R")
-        st.write(f"Mean MFE: {mean_mfe:.2f}R")
-        st.write(f"Median MFE: {median_mfe:.2f}R")
-        st.write(f"Max MFE: {max_mfe:.2f}R")
+        non_zero_mfe = [mfe for mfe in mfe_list if mfe > 0]
+        if non_zero_mfe:
+            min_mfe = min(non_zero_mfe)
+            mean_mfe = sum(mfe_list) / len(mfe_list)
+            median_mfe = sorted(mfe_list)[len(mfe_list) // 2]
+            max_mfe = max(mfe_list)
+            
+            st.write("MFE Statistics (in R multiples, where 1R = initial risk):")
+            st.write(f"Min MFE (excluding 0): {min_mfe:.2f}R")
+            st.write(f"Mean MFE: {mean_mfe:.2f}R")
+            st.write(f"Median MFE: {median_mfe:.2f}R")
+            st.write(f"Max MFE: {max_mfe:.2f}R")
+        else:
+            st.write("All MFE values are 0. No meaningful MFE statistics available.")
     else:
         st.write("No MFE data available.")
 
