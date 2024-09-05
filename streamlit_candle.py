@@ -184,12 +184,12 @@ def main():
     ticker = st.sidebar.text_input("Enter Ticker Symbol", value="0700.HK")
     
     st.sidebar.header("Pinbar Analysis")
-    pinbar_lookback = st.sidebar.slider("Up/ Down Trend Defining Lookback Period", min_value=5, max_value=50, value=10, key="pinbar_lookback")
+    pinbar_lookback = st.sidebar.slider("Pinbar Up/Down Trend Defining Lookback Period", min_value=5, max_value=50, value=10, key="pinbar_lookback")
     wick_ratio = st.sidebar.slider("Wick Ratio", min_value=0.5, max_value=0.95, value=0.75, step=0.05)
     pinbar_stop_loss = st.sidebar.slider("Pinbar Stop Loss (ATR multiplier)", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="pinbar_stop_loss")
     
     st.sidebar.header("Engulfing Pattern Analysis")
-    engulfing_lookback = st.sidebar.slider("Up/ Down Trend Defining Lookback Period", min_value=5, max_value=50, value=20, key="engulfing_lookback")
+    engulfing_lookback = st.sidebar.slider("Engulfing Up/Down Trend Defining Lookback Period", min_value=5, max_value=50, value=20, key="engulfing_lookback")
     body_ratio = st.sidebar.slider("Body Ratio", min_value=0.5, max_value=0.95, value=0.8, step=0.05)
     engulfing_stop_loss = st.sidebar.slider("Engulfing Stop Loss (ATR multiplier)", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="engulfing_stop_loss")
     
@@ -205,7 +205,10 @@ def main():
     st.info(f"Stop Loss Calculation: For bearish patterns, stop loss is set at the high of the trigger candle plus {pinbar_stop_loss:.1f} ATR for Pinbars and {engulfing_stop_loss:.1f} ATR for Engulfing patterns. For bullish patterns, it's set at the low of the trigger candle minus the same ATR multiplier. ATR is calculated over a 14-day period.")
     
     atr = calculate_atr(data)
-    bearish_pinbars, bullish_pinbars, bearish_engulfing, bullish_engulfing = analyze_patterns(data, max(pinbar_lookback, engulfing_lookback), wick_ratio, body_ratio)
+    
+    # Separate analysis for Pinbars and Engulfing patterns
+    bearish_pinbars, bullish_pinbars, _, _ = analyze_patterns(data, pinbar_lookback, wick_ratio, body_ratio)
+    _, _, bearish_engulfing, bullish_engulfing = analyze_patterns(data, engulfing_lookback, wick_ratio, body_ratio)
     
     multipliers = [0.5, 1, 1.5, 2, 3]
     
@@ -241,4 +244,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
