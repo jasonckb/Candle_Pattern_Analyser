@@ -146,6 +146,14 @@ def calculate_success_rate(data, patterns, multipliers, atr, stop_loss_atr):
     
     return results, mfe_list
 
+def display_results(results, pattern_name):
+    st.subheader(f"{pattern_name} Results")
+    for mult, result in results.items():
+        total = result['success'] + result['fail']
+        if total > 0:
+            win_rate = result['success'] / total
+            st.write(f"Target {mult}x RR - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
+
 def display_mfe_stats(mfe_list):
     if mfe_list:
         min_mfe = min(mfe_list)
@@ -161,21 +169,37 @@ def display_mfe_stats(mfe_list):
     else:
         st.write("No MFE data available.")
 
-
-
-def display_results(results, pattern_name):
-    st.subheader(f"{pattern_name} Results")
-    for mult, result in results.items():
-        total = result['success'] + result['fail']
-        if total > 0:
-            win_rate = result['success'] / total
-            st.write(f"Target {mult}x RR - Success: {result['success']}, Fail: {result['fail']}, Win Rate: {win_rate:.2%}")
-
 def main():
     st.set_page_config(layout="wide")
     st.title("Price Pattern Analysis by Jason Chan")
     
     ticker = st.sidebar.text_input("Enter Ticker Symbol", value="0700.HK")
+    
+    st.sidebar.header("Pinbar Analysis")
+    pinbar_lookback = st.sidebar.slider("Up/ Down Trend Defining Lookback Period", min_value=5, max_value=50, value=10, key="pinbar_lookback")
+    wick_ratio = st.sidebar.slider("Wick Ratio", min_value=0.5, max_value=0.95, value=0.75, step=0.05)
+    pinbar_stop_loss = st.sidebar.slider("Pinbar Stop Loss (ATR multiplier)", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="pinbar_stop_loss")
+    
+    st.sidebar.header("Engulfing Pattern Analysis")
+    engulfing_lookback = st.sidebar.slider("Up/ Down Trend Defining Lookback Period", min_value=5, max_value=50, value=20, key="engulfing_lookback")
+    body_ratio = st.sidebar.slider("Body Ratio", min_value=0.5, max_value=0.95, value=0.8, step=0.05)
+    engulfing_stop_loss = st.sidebar.slider("Engulfing Stop Loss (ATR multiplier)", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="engulfing_stop_loss")
+    
+    data = download_data(ticker)
+    
+    if data.empty:
+        st.error(f"No data found for ticker {ticker}")
+        return
+    
+    st.write(f"Analyzing {ticker} data...")
+    st.write(f"Data period: from {data.index[0].date()} to {data.index[-1].date()} ({len(data)} trading days)")
+    
+    st.info(f"Stop Loss Calculation: For bearish patterns, stop loss is set at the high of the trigger candle plus {pinbar_stop_loss:.1f} ATR for Pinbars and {engulfing_stop_loss:.1f} ATR for Engulfing patterns. For bullish patterns, it's set at the low of the trigger candle minus the same ATR multiplier. ATR is calculated over a 14-day period.")
+    
+    atr = calculate_atr(data)
+    bearish_pinbars, bullish_pinbars, bearish_engulfing, bullish_engulfing = analyze_patterns(data, max(pinbar_lookback, engulfing_lookback), wick_ratio, body_ratio)
+    
+    multipliers = [0.5, 1, 1.5, 2, 3]
     
     st.header("Pinbar Analysis")
     col1, col2 = st.columns(2)
@@ -209,3 +233,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
