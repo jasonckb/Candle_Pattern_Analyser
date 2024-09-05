@@ -308,6 +308,43 @@ def debug_chart_data(data, patterns, atr, stop_loss_atr, multipliers):
             else:
                 print(f"\nWarning: Index {idx} not found in data for {pattern}")
 
+# Add this debugging function to your code
+def debug_chart_data(data, patterns, atr, stop_loss_atr, multipliers):
+    print(f"Data shape: {data.shape}")
+    print(f"ATR shape: {atr.shape}")
+    print("Patterns:")
+    for pattern, indices in patterns.items():
+        print(f"  {pattern}: {len(indices)} occurrences")
+    print(f"Stop loss ATR: {stop_loss_atr}")
+    print(f"Multipliers: {multipliers}")
+    
+    # Print details for the first pattern of each type
+    for pattern, indices in patterns.items():
+        if indices:
+            idx = indices[0]
+            if idx in data.index:
+                candle = data.loc[idx]
+                print(f"\nExample for {pattern}:")
+                print(f"  Date: {candle.name}")
+                print(f"  Open: {candle['Open']}, High: {candle['High']}, Low: {candle['Low']}, Close: {candle['Close']}")
+                print(f"  ATR: {atr[idx]}")
+                
+                is_bullish = pattern.startswith('Bullish')
+                if is_bullish:
+                    stop_loss = candle['Low'] - stop_loss_atr * atr[idx]
+                    risk = candle['Close'] - stop_loss
+                else:
+                    stop_loss = candle['High'] + stop_loss_atr * atr[idx]
+                    risk = stop_loss - candle['Close']
+                
+                print(f"  Stop Loss: {stop_loss}")
+                print(f"  Risk: {risk}")
+                for mult in multipliers:
+                    target = candle['Close'] + (mult * risk if is_bullish else -mult * risk)
+                    print(f"  Target {mult}x: {target}")
+            else:
+                print(f"\nWarning: Index {idx} not found in data for {pattern}")
+
 
 
 def main():
