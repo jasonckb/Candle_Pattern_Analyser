@@ -220,6 +220,11 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                     hovertext=[pattern_name]
                 ))
 
+                # Calculate end date (5 trading days later)
+                start_idx = data.index.get_loc(idx)
+                end_idx = min(start_idx + 5, len(data) - 1)
+                end_date = data.index[end_idx]
+
                 # Add stop loss and target levels
                 is_bullish = pattern_name.startswith('Bullish')
                 if is_bullish:
@@ -233,7 +238,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
 
                 # Add stop loss line
                 fig.add_trace(go.Scatter(
-                    x=[candle.name, candle.name + timedelta(days=5)],
+                    x=[candle.name, end_date],
                     y=[stop_loss, stop_loss],
                     mode='lines',
                     line=dict(color='red', dash='dash'),
@@ -244,7 +249,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                 # Add target lines
                 for i, target in enumerate(targets):
                     fig.add_trace(go.Scatter(
-                        x=[candle.name, candle.name + timedelta(days=5)],
+                        x=[candle.name, end_date],
                         y=[target, target],
                         mode='lines',
                         line=dict(color='green', dash='dash'),
@@ -273,6 +278,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
     )
 
     return fig
+
 
 
 def main():
