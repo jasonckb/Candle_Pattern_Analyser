@@ -220,14 +220,15 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
             ))
 
             # Add stop loss and target levels
-            if candle['Close'] < candle['Open']:  # Bearish pattern
-                stop_loss = candle['High'] + stop_loss_atr * atr[idx]
-                risk = stop_loss - candle['Close']
-                targets = [candle['Close'] - mult * risk for mult in multipliers]
-            else:  # Bullish pattern
+            is_bullish = pattern_name.startswith('Bullish')
+            if is_bullish:
                 stop_loss = candle['Low'] - stop_loss_atr * atr[idx]
                 risk = candle['Close'] - stop_loss
                 targets = [candle['Close'] + mult * risk for mult in multipliers]
+            else:  # Bearish pattern
+                stop_loss = candle['High'] + stop_loss_atr * atr[idx]
+                risk = stop_loss - candle['Close']
+                targets = [candle['Close'] - mult * risk for mult in multipliers]
 
             # Add stop loss line
             fig.add_trace(go.Scatter(
@@ -258,6 +259,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
     )
 
     return fig
+
 
 def main():
     st.set_page_config(layout="wide")
