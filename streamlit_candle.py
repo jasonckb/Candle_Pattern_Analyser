@@ -181,9 +181,11 @@ def display_mfe_stats(mfe_list):
 
 
 def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
-    # Remove weekends and non-trading days
+    # Ensure the index is datetime
+    data.index = pd.to_datetime(data.index)
+    
+    # Remove weekends
     data = data[data.index.dayofweek < 5]
-    data = data.dropna()
 
     fig = make_subplots(rows=1, cols=1, shared_xaxes=True, vertical_spacing=0.03, subplot_titles=('Candlestick Chart'))
 
@@ -228,9 +230,16 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                     risk = stop_loss - candle['Close']
                     targets = [candle['Close'] - mult * risk for mult in multipliers]
 
+                # Find the next 5 trading days
+                next_5_days = data.index[data.index > idx][:5]
+                if len(next_5_days) > 0:
+                    end_date = next_5_days[-1]
+                else:
+                    end_date = idx + timedelta(days=5)
+
                 # Add stop loss line
                 fig.add_trace(go.Scatter(
-                    x=[candle.name, candle.name + timedelta(days=5)],
+                    x=[idx, end_date],
                     y=[stop_loss, stop_loss],
                     mode='lines',
                     line=dict(color='red', dash='dash'),
@@ -241,7 +250,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                 # Add target lines
                 for i, target in enumerate(targets):
                     fig.add_trace(go.Scatter(
-                        x=[candle.name, candle.name + timedelta(days=5)],
+                        x=[idx, end_date],
                         y=[target, target],
                         mode='lines',
                         line=dict(color='green', dash='dash'),
@@ -257,6 +266,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
     )
 
     return fig
+
 
 
 
