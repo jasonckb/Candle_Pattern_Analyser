@@ -161,13 +161,14 @@ def display_mfe_stats(mfe_list):
         median_mfe = sorted(mfe_list)[len(mfe_list) // 2]
         max_mfe = max(mfe_list)
         
-        st.write("MFE Statistics:")
-        st.write(f"Min MFE: {min_mfe:.2f}")
-        st.write(f"Mean MFE: {mean_mfe:.2f}")
-        st.write(f"Median MFE: {median_mfe:.2f}")
-        st.write(f"Max MFE: {max_mfe:.2f}")
+        st.write("MFE Statistics (in R multiples, where 1R = initial risk):")
+        st.write(f"Min MFE: {min_mfe:.2f}R")
+        st.write(f"Mean MFE: {mean_mfe:.2f}R")
+        st.write(f"Median MFE: {median_mfe:.2f}R")
+        st.write(f"Max MFE: {max_mfe:.2f}R")
     else:
         st.write("No MFE data available.")
+
 
 def main():
     st.set_page_config(layout="wide")
