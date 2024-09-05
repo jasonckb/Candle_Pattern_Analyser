@@ -195,18 +195,11 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
         low=data['Low'],
         close=data['Close'],
         increasing_line_color='dodgerblue',
-        decreasing_line_color='darkpink',  # Changed to dark pink for bearish candles
+        decreasing_line_color='#FF1493',  # Dark pink color code
         name='Candlesticks'
     ))
 
     # Highlight patterns
-    pattern_colors = {
-        'Bearish Pinbar': 'orange',
-        'Bullish Pinbar': 'orange',
-        'Bearish Engulfing': 'orange',
-        'Bullish Engulfing': 'orange'
-    }
-
     for pattern_name, pattern_indices in patterns.items():
         for idx in pattern_indices:
             if idx in data.index:
@@ -264,6 +257,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
     )
 
     return fig
+
 
 
 def main():
