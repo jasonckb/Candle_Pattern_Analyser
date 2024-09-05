@@ -196,13 +196,6 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
     ))
 
     # Highlight patterns
-    pattern_colors = {
-        'Bearish Pinbar': 'yellow',
-        'Bullish Pinbar': 'yellow',
-        'Bearish Engulfing': 'orange',
-        'Bullish Engulfing': 'orange'
-    }
-
     for pattern_name, pattern_indices in patterns.items():
         for idx in pattern_indices:
             if idx in data.index:
@@ -213,8 +206,8 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                     high=[candle['High']],
                     low=[candle['Low']],
                     close=[candle['Close']],
-                    increasing_line_color=pattern_colors[pattern_name],
-                    decreasing_line_color=pattern_colors[pattern_name],
+                    increasing_line_color='orange',
+                    decreasing_line_color='orange',
                     name=pattern_name,
                     showlegend=False,
                     hovertext=[pattern_name]
@@ -230,11 +223,9 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                 if is_bullish:
                     stop_loss = candle['Low'] - stop_loss_atr * atr[idx]
                     risk = candle['Close'] - stop_loss
-                    targets = [candle['Close'] + mult * risk for mult in multipliers]
                 else:  # Bearish pattern
                     stop_loss = candle['High'] + stop_loss_atr * atr[idx]
                     risk = stop_loss - candle['Close']
-                    targets = [candle['Close'] - mult * risk for mult in multipliers]
 
                 # Add stop loss line
                 fig.add_trace(go.Scatter(
@@ -247,13 +238,14 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                 ))
 
                 # Add target lines
-                for i, target in enumerate(targets):
+                for mult in multipliers:
+                    target = candle['Close'] + (mult * risk if is_bullish else -mult * risk)
                     fig.add_trace(go.Scatter(
                         x=[candle.name, end_date],
                         y=[target, target],
                         mode='lines',
                         line=dict(color='green', dash='dash'),
-                        name=f'Target {multipliers[i]}x',
+                        name=f'Target {mult}x',
                         showlegend=False
                     ))
 
@@ -278,6 +270,43 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
     )
 
     return fig
+
+# Add this debugging function to your code
+def debug_chart_data(data, patterns, atr, stop_loss_atr, multipliers):
+    print(f"Data shape: {data.shape}")
+    print(f"ATR shape: {atr.shape}")
+    print("Patterns:")
+    for pattern, indices in patterns.items():
+        print(f"  {pattern}: {len(indices)} occurrences")
+    print(f"Stop loss ATR: {stop_loss_atr}")
+    print(f"Multipliers: {multipliers}")
+    
+    # Print details for the first pattern of each type
+    for pattern, indices in patterns.items():
+        if indices:
+            idx = indices[0]
+            if idx in data.index:
+                candle = data.loc[idx]
+                print(f"\nExample for {pattern}:")
+                print(f"  Date: {candle.name}")
+                print(f"  Open: {candle['Open']}, High: {candle['High']}, Low: {candle['Low']}, Close: {candle['Close']}")
+                print(f"  ATR: {atr[idx]}")
+                
+                is_bullish = pattern.startswith('Bullish')
+                if is_bullish:
+                    stop_loss = candle['Low'] - stop_loss_atr * atr[idx]
+                    risk = candle['Close'] - stop_loss
+                else:
+                    stop_loss = candle['High'] + stop_loss_atr * atr[idx]
+                    risk = stop_loss - candle['Close']
+                
+                print(f"  Stop Loss: {stop_loss}")
+                print(f"  Risk: {risk}")
+                for mult in multipliers:
+                    target = candle['Close'] + (mult * risk if is_bullish else -mult * risk)
+                    print(f"  Target {mult}x: {target}")
+            else:
+                print(f"\nWarning: Index {idx} not found in data for {pattern}")
 
 
 
