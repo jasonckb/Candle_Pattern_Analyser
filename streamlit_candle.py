@@ -195,7 +195,14 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
         name='Candlesticks'
     ))
 
-    # Highlight patterns and add annotations
+    # Highlight patterns
+    pattern_colors = {
+        'Bearish Pinbar': 'yellow',
+        'Bullish Pinbar': 'yellow',
+        'Bearish Engulfing': 'orange',
+        'Bullish Engulfing': 'orange'
+    }
+
     for pattern_name, pattern_indices in patterns.items():
         for idx in pattern_indices:
             if idx in data.index:
@@ -206,8 +213,8 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                     high=[candle['High']],
                     low=[candle['Low']],
                     close=[candle['Close']],
-                    increasing_line_color='orange',
-                    decreasing_line_color='orange',
+                    increasing_line_color=pattern_colors[pattern_name],
+                    decreasing_line_color=pattern_colors[pattern_name],
                     name=pattern_name,
                     showlegend=False,
                     hovertext=[pattern_name]
@@ -224,14 +231,9 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                     risk = stop_loss - candle['Close']
                     targets = [candle['Close'] - mult * risk for mult in multipliers]
 
-                # Find the end date for annotations (5 trading days later)
-                start_loc = data.index.get_loc(idx)
-                end_loc = min(start_loc + 5, len(data) - 1)
-                end_date = data.index[end_loc]
-
                 # Add stop loss line
                 fig.add_trace(go.Scatter(
-                    x=[idx, end_date],
+                    x=[candle.name, candle.name + timedelta(days=5)],
                     y=[stop_loss, stop_loss],
                     mode='lines',
                     line=dict(color='red', dash='dash'),
@@ -242,7 +244,7 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
                 # Add target lines
                 for i, target in enumerate(targets):
                     fig.add_trace(go.Scatter(
-                        x=[idx, end_date],
+                        x=[candle.name, candle.name + timedelta(days=5)],
                         y=[target, target],
                         mode='lines',
                         line=dict(color='green', dash='dash'),
@@ -271,10 +273,6 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
     )
 
     return fig
-
-
-
-
 
 
 def main():
