@@ -181,6 +181,10 @@ def display_mfe_stats(mfe_list):
 
 
 def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
+    # Remove weekends and non-trading days
+    data = data[data.index.dayofweek < 5]
+    data = data.dropna()
+
     fig = make_subplots(rows=1, cols=1, shared_xaxes=True, vertical_spacing=0.03, subplot_titles=('Candlestick Chart'))
 
     # Add candlestick trace
@@ -191,65 +195,66 @@ def create_candlestick_chart(data, patterns, atr, stop_loss_atr, multipliers):
         low=data['Low'],
         close=data['Close'],
         increasing_line_color='dodgerblue',
-        decreasing_line_color='pink',
+        decreasing_line_color='darkpink',  # Changed to dark pink for bearish candles
         name='Candlesticks'
     ))
 
     # Highlight patterns
     pattern_colors = {
-        'Bearish Pinbar': 'yellow',
-        'Bullish Pinbar': 'yellow',
+        'Bearish Pinbar': 'orange',
+        'Bullish Pinbar': 'orange',
         'Bearish Engulfing': 'orange',
         'Bullish Engulfing': 'orange'
     }
 
     for pattern_name, pattern_indices in patterns.items():
         for idx in pattern_indices:
-            candle = data.iloc[idx]
-            fig.add_trace(go.Candlestick(
-                x=[candle.name],
-                open=[candle['Open']],
-                high=[candle['High']],
-                low=[candle['Low']],
-                close=[candle['Close']],
-                increasing_line_color=pattern_colors[pattern_name],
-                decreasing_line_color=pattern_colors[pattern_name],
-                name=pattern_name,
-                showlegend=False,
-                hovertext=[pattern_name]
-            ))
+            if idx in data.index:
+                candle = data.loc[idx]
+                fig.add_trace(go.Candlestick(
+                    x=[candle.name],
+                    open=[candle['Open']],
+                    high=[candle['High']],
+                    low=[candle['Low']],
+                    close=[candle['Close']],
+                    increasing_line_color='orange',
+                    decreasing_line_color='orange',
+                    name=pattern_name,
+                    showlegend=False,
+                    hovertext=[pattern_name]
+                ))
 
-            # Add stop loss and target levels
-            is_bullish = pattern_name.startswith('Bullish')
-            if is_bullish:
-                stop_loss = candle['Low'] - stop_loss_atr * atr[idx]
-                risk = candle['Close'] - stop_loss
-                targets = [candle['Close'] + mult * risk for mult in multipliers]
-            else:  # Bearish pattern
-                stop_loss = candle['High'] + stop_loss_atr * atr[idx]
-                risk = stop_loss - candle['Close']
-                targets = [candle['Close'] - mult * risk for mult in multipliers]
+                # Add stop loss and target levels
+                is_bullish = pattern_name.startswith('Bullish')
+                if is_bullish:
+                    stop_loss = candle['Low'] - stop_loss_atr * atr[idx]
+                    risk = candle['Close'] - stop_loss
+                    targets = [candle['Close'] + mult * risk for mult in multipliers]
+                else:  # Bearish pattern
+                    stop_loss = candle['High'] + stop_loss_atr * atr[idx]
+                    risk = stop_loss - candle['Close']
+                    targets = [candle['Close'] - mult * risk for mult in multipliers]
 
-            # Add stop loss line
-            fig.add_trace(go.Scatter(
-                x=[candle.name, candle.name + timedelta(days=5)],
-                y=[stop_loss, stop_loss],
-                mode='lines',
-                line=dict(color='red', dash='dash'),
-                name='Stop Loss',
-                showlegend=False
-            ))
-
-            # Add target lines
-            for i, target in enumerate(targets):
+                # Add stop loss line
                 fig.add_trace(go.Scatter(
                     x=[candle.name, candle.name + timedelta(days=5)],
-                    y=[target, target],
+                    y=[stop_loss, stop_loss],
                     mode='lines',
-                    line=dict(color='green', dash='dash'),
-                    name=f'Target {multipliers[i]}x',
+                    line=dict(color='red', dash='dash'),
+                    name='Stop Loss',
                     showlegend=False
                 ))
+
+                # Add target lines
+                for i, target in enumerate(targets):
+                    fig.add_trace(go.Scatter(
+                        x=[candle.name, candle.name + timedelta(days=5)],
+                        y=[target, target],
+                        mode='lines',
+                        line=dict(color='green', dash='dash'),
+                        name=f'Target {multipliers[i]}x',
+                        showlegend=False
+                    ))
 
     fig.update_layout(
         title='One Year Candlestick Chart with Pattern Analysis',
