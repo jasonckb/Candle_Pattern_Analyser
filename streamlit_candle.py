@@ -275,48 +275,88 @@ def main():
     body_ratio = st.sidebar.slider("Body Ratio", min_value=0.5, max_value=0.95, value=0.8, step=0.05)
     engulfing_stop_loss = st.sidebar.slider("Engulfing Stop Loss (ATR multiplier)", min_value=0.1, max_value=2.0, value=0.5, step=0.1, key="engulfing_stop_loss")
     
-    # Download one year of data
+    # Download one year of data for the chart
     end_date = datetime.now()
     start_date = end_date - timedelta(days=365)
-    data = yf.download(ticker, start=start_date, end=end_date)
+    chart_data = yf.download(ticker, start=start_date, end=end_date)
     
-    if data.empty:
+    # Download all available data for the full analysis
+    full_data = download_data(ticker)
+    
+    if full_data.empty:
         st.error(f"No data found for ticker {ticker}")
         return
     
     st.write(f"Analyzing {ticker} data...")
-    st.write(f"Data period: from {data.index[0].date()} to {data.index[-1].date()} ({len(data)} trading days)")
+    st.write(f"Full data period: from {full_data.index[0].date()} to {full_data.index[-1].date()} ({len(full_data)} trading days)")
     
     st.info(f"Stop Loss Calculation: For bearish patterns, stop loss is set at the high of the trigger candle plus {pinbar_stop_loss:.1f} ATR for Pinbars and {engulfing_stop_loss:.1f} ATR for Engulfing patterns. For bullish patterns, it's set at the low of the trigger candle minus the same ATR multiplier. ATR is calculated over a 14-day period.")
     
-    atr = calculate_atr(data)
+    # Calculate ATR for both datasets
+    chart_atr = calculate_atr(chart_data)
+    full_atr = calculate_atr(full_data)
     
-    # Separate analysis for Pinbars and Engulfing patterns
-    bearish_pinbars, bullish_pinbars, _, _ = analyze_patterns(data, pinbar_lookback, wick_ratio, body_ratio)
-    _, _, bearish_engulfing, bullish_engulfing = analyze_patterns(data, engulfing_lookback, wick_ratio, body_ratio)
+    # Analyze patterns for both datasets
+    chart_bearish_pinbars, chart_bullish_pinbars, _, _ = analyze_patterns(chart_data, pinbar_lookback, wick_ratio, body_ratio)
+    _, _, chart_bearish_engulfing, chart_bullish_engulfing = analyze_patterns(chart_data, engulfing_lookback, wick_ratio, body_ratio)
     
-    patterns = {
-        'Bearish Pinbar': bearish_pinbars,
-        'Bullish Pinbar': bullish_pinbars,
-        'Bearish Engulfing': bearish_engulfing,
-        'Bullish Engulfing': bullish_engulfing
+    full_bearish_pinbars, full_bullish_pinbars, _, _ = analyze_patterns(full_data, pinbar_lookback, wick_ratio, body_ratio)
+    _, _, full_bearish_engulfing, full_bullish_engulfing = analyze_patterns(full_data, engulfing_lookback, wick_ratio, body_ratio)
+    
+    chart_patterns = {
+        'Bearish Pinbar': chart_bearish_pinbars,
+        'Bullish Pinbar': chart_bullish_pinbars,
+        'Bearish Engulfing': chart_bearish_engulfing,
+        'Bullish Engulfing': chart_bullish_engulfing
     }
     
     multipliers = [0.5, 1, 1.5, 2, 3]
     
     # Create and display the candlestick chart
-    fig = create_candlestick_chart(data, patterns, atr, max(pinbar_stop_loss, engulfing_stop_loss), multipliers)
+    fig = create_candlestick_chart(chart_data, chart_patterns, chart_atr, max(pinbar_stop_loss, engulfing_stop_loss), multipliers)
     st.plotly_chart(fig, use_container_width=True)
     
-    # Display pattern counts
-    st.subheader("Pattern Counts")
-    for pattern_name, pattern_indices in patterns.items():
+    # Display pattern counts for the charted period
+    st.subheader("Pattern Counts (Last Year)")
+    for pattern_name, pattern_indices in chart_patterns.items():
         st.write(f"{pattern_name}: {len(pattern_indices)}")
     
-    # ... (rest of the analysis remains the same)
+    # Display full analysis results
+    st.header("Full Data Analysis")
+    
+    st.subheader("Pinbar Analysis")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write(f"Total Bearish Pinbars: {len(full_bearish_pinbars)}")
+        bearish_pinbar_results, bearish_pinbar_mfe = calculate_success_rate(full_data, full_bearish_pinbars, multipliers, full_atr, pinbar_stop_loss)
+        display_results(bearish_pinbar_results, f"Bearish Pinbar (Wick size = {wick_ratio:.0%} of Bar)")
+        display_mfe_stats(bearish_pinbar_mfe)
+    
+    with col2:
+        st.write(f"Total Bullish Pinbars: {len(full_bullish_pinbars)}")
+        bullish_pinbar_results, bullish_pinbar_mfe = calculate_success_rate(full_data, full_bullish_pinbars, multipliers, full_atr, pinbar_stop_loss)
+        display_results(bullish_pinbar_results, f"Bullish Pinbar (Wick size = {wick_ratio:.0%} of Bar)")
+        display_mfe_stats(bullish_pinbar_mfe)
+    
+    st.subheader("Engulfing Pattern Analysis")
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        st.write(f"Total Bearish Engulfing: {len(full_bearish_engulfing)}")
+        bearish_engulfing_results, bearish_engulfing_mfe = calculate_success_rate(full_data, full_bearish_engulfing, multipliers, full_atr, engulfing_stop_loss)
+        display_results(bearish_engulfing_results, f"Bearish Engulfing (Body size = {body_ratio:.0%} of Bar)")
+        display_mfe_stats(bearish_engulfing_mfe)
+    
+    with col4:
+        st.write(f"Total Bullish Engulfing: {len(full_bullish_engulfing)}")
+        bullish_engulfing_results, bullish_engulfing_mfe = calculate_success_rate(full_data, full_bullish_engulfing, multipliers, full_atr, engulfing_stop_loss)
+        display_results(bullish_engulfing_results, f"Bullish Engulfing (Body size = {body_ratio:.0%} of Bar)")
+        display_mfe_stats(bullish_engulfing_mfe)
 
 if __name__ == "__main__":
     main()
+
 
 
 
