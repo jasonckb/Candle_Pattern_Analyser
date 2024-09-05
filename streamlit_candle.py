@@ -19,10 +19,18 @@ def calculate_atr(data, period=14):
     return true_range.rolling(period).mean()
 
 def is_uptrend(data, lookback):
-    return data['High'].iloc[-1] > data['High'].iloc[-lookback-1]
+    # Extract the 'High' values for the last 'lookback' periods
+    recent_highs = data['High'][-lookback:]
+    
+    # Check if the most recent high is higher than the highest high in the lookback period
+    return data['High'].iloc[-1] > recent_highs.max()
 
 def is_downtrend(data, lookback):
-    return data['Low'].iloc[-1] < data['Low'].iloc[-lookback-1]
+    # Extract the 'Low' values for the last 'lookback' periods
+    recent_lows = data['Low'][-lookback:]
+    
+    # Check if the most recent low is lower than the lowest low in the lookback period
+    return data['Low'].iloc[-1] < recent_lows.min()
 
 def is_bearish_pinbar(candle, uptrend, upper_wick_ratio):
     candle_size = candle['High'] - candle['Low']
